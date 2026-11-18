@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+.env*
+*.tgz
+*.tar.gz
+test-results/
+playwright-report/
+coverage/
+data/
+.openai/.local/
+
+
+.openai/
+.local/

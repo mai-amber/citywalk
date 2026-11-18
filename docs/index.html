@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#153f35">
+  <meta name="description" content="Explore real Paris streets. Swipe in Regular mode or turn your phone in Gyro mode.">
+  <title>City Walk</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css?v=2">
+<meta name="robots" content="noindex, nofollow">
+</head>
+<body data-mode="regular">
+  <main id="view" aria-label="Street View of Paris"></main>
+  <nav aria-label="Look mode">
+    <button id="regular" aria-pressed="true" disabled>Regular</button>
+    <button id="gyro" aria-pressed="false" disabled>Gyro</button>
+  </nav>
+  <button id="recenter" aria-label="Recenter the gyro view" title="Recenter" hidden>↺</button>
+  <div id="loading" role="status">
+    <span id="loading-message">Opening Paris…</span>
+    <button id="retry" hidden>Try again</button>
+  </div>
+  <div id="notice" role="status" hidden></div>
+  <p id="hint">Swipe to look · Tap the street to move</p>
+  <button id="forward" disabled hidden>Forward <span aria-hidden="true">↑</span></button>
+  <a id="about" href="about.html" aria-label="About and privacy" title="About and privacy">i</a>
+  <script type="module" src="app.js?v=3"></script>
+</body>
+</html>
