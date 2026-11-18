@@ -32,4 +32,4 @@ button('Blur session', () => device.updateVisibilityState('visible-blurred'));
 button('Resume session', () => device.updateVisibilityState('visible'));
 button('B · Exit VR', () => press('right', 'b-button'));
 document.body.append(panel);
-await import('/quest.js?v=3');
+await import('/quest.js?v=4');

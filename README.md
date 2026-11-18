@@ -12,6 +12,8 @@ This is an independent copy of City Walk. The original public link remains at ht
 
 The starting point is near Rue Montorgueil in Paris. Movement follows Google's linked photographic viewpoints. This prototype does not record research sessions or request location. The About page includes privacy information and Google terms.
 
+VR uses progressive loading: a small 360° panorama opens first and immediately unlocks the next move. The same view sharpens in the background. Moving again cancels the previous refinement; a failed refinement leaves the small view usable. The previous street stays visible during loading, with a short blend into the next view.
+
 ## Publish on GitHub Pages
 
 The complete deployable website is in `docs/`; no build step or dependency installation is needed. In repository Settings → Pages, select **Deploy from a branch**, branch **main**, folder **/docs**, and Save. `.nojekyll` keeps the static files unchanged.
@@ -37,4 +39,4 @@ Run `npm start`, then open `http://localhost:4317`. The local-only `/setup` page
 
 The local `/xr-test` page uses Meta's IWER 2.8.0 emulator to exercise the Quest viewer. Its code stays outside `docs/`. Actual phone motion and physical Quest behavior still require on-device checks.
 
-Source copied from original commit `13c50c02eb4de1551c7d056a31a3fc59a6c92770`; app controls and rendering are preserved.
+Source copied from original commit `13c50c02eb4de1551c7d056a31a3fc59a6c92770`. The original site is maintained independently.

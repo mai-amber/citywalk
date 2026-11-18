@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { DEG, safeReportURL } from './core.js';
-import { StreetTiles } from './street-tiles.js';
+import { StreetTiles } from './street-tiles.js?v=4';
+import { ProgressivePanorama } from './progressive-panorama.js';
 import { alignHeadToStreet, headHeading, nextStreet, panoramaRotation, spherePoint, ControllerButtons, MovementGate } from './quest-controls.js';
 
 const $ = id => document.getElementById(id);
@@ -9,7 +10,7 @@ const LOCAL_PREVIEW = ['localhost', '127.0.0.1'].includes(location.hostname) && 
 const headPosition = new THREE.Vector3(), headOrientation = new THREE.Quaternion();
 const buttons = new ControllerButtons(), movement = new MovementGate();
 let renderer, scene, camera, rig, sky, arrows, hud, hudTexture, hudCanvas, hudContext;
-let tiles, current, currentMesh, transition, session, referenceSpace;
+let tiles, panoramas, current, currentMesh, transition, session, referenceSpace;
 let supported = false, ready = false, entering = false, tracked = false;
 let primeInputs = true;
 const heldTriggers = new Set();
@@ -70,15 +71,19 @@ function refreshArrows() {
     arrows.add(arrow);
   }
 }
-async function showPanorama(metadata, canvas) {
+function makeTexture(canvas) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.minFilter = THREE.LinearFilter; texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
+  renderer.initTexture(texture);
+  return texture;
+}
+async function showPanorama(metadata, canvas) {
+  const texture = makeTexture(canvas);
   const mesh = new THREE.Mesh(sphereGeometry, new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, toneMapped: false, depthWrite: false, transparent: true, opacity: currentMesh ? 0 : 1 }));
   const rotation = panoramaRotation(metadata);
   mesh.rotation.set(rotation.x, rotation.y, rotation.z, 'YXZ');
-  renderer.initTexture(texture);
   sky.add(mesh);
   updateAttribution(metadata, current?.copyright);
   if (currentMesh) {
@@ -89,12 +94,18 @@ async function showPanorama(metadata, canvas) {
   updateAttribution(metadata);
   refreshArrows();
   $('vr-view').dataset.view = metadata.panoId;
+  $('vr-view').dataset.quality = 'preview';
+}
+function sharpenPanorama(metadata, canvas) {
+  if (current !== metadata || !currentMesh) { canvas.width = canvas.height = 1; return; }
+  const previous = currentMesh.material.map;
+  currentMesh.material.map = makeTexture(canvas);
+  previous.dispose();
+  previous.image.width = previous.image.height = 1;
+  $('vr-view').dataset.quality = 'detail';
 }
 async function loadView(location) {
-  const metadata = await tiles.metadata(location);
-  const zoom = renderer.capabilities.maxTextureSize >= 8192 ? 4 : 3;
-  const canvas = await tiles.image(metadata, zoom, progress => say(`Opening street… ${Math.round(progress * 100)}%`));
-  await showPanorama(metadata, canvas);
+  return panoramas.load(location);
 }
 async function move() {
   if (!ready || entering || (session && (!tracked || session.visibilityState !== 'visible'))) return;
@@ -103,7 +114,7 @@ async function move() {
   try {
     await movement.run(async () => {
       say('Opening the next street…');
-      // Keep the current complete image visible and head-tracked while the next loads.
+      // Keep the old view head-tracked until the small next view is ready.
       await loadView({ panoId: link.panoId });
       say('Turn your head · Trigger or A/X to move', 3000);
     });
@@ -272,6 +283,12 @@ async function start() {
     const response = await fetch('./maps-config.json', { cache: 'no-store' });
     const config = await response.json();
     tiles = new StreetTiles(config.apiKey);
+    panoramas = new ProgressivePanorama(tiles, {
+      showPreview: showPanorama, showDetail: sharpenPanorama,
+      release: canvas => { canvas.width = canvas.height = 1; },
+      detailZoom: renderer.capabilities.maxTextureSize >= 8192 ? 4 : 3,
+    });
+    window.addEventListener('pagehide', () => panoramas.cancel());
     await loadView(START);
     ready = true;
     $('enter-vr').disabled = !supported;

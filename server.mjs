@@ -10,7 +10,7 @@ http.createServer(async (req, res) => {
   try {
     const route = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     if (route === '/xr-test' && req.method === 'GET') {
-      const page = (await readFile(path.join(root, 'quest.html'), 'utf8')).replace('src="quest.js?v=3"', 'src="/validation/xr-test.js"');
+      const page = (await readFile(path.join(root, 'quest.html'), 'utf8')).replace('src="quest.js?v=4"', 'src="/validation/xr-test.js"');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(page);
       return;
     }

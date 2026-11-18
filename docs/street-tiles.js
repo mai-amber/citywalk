@@ -18,10 +18,11 @@ export class StreetTiles {
     }
     return response;
   }
-  async ensureSession() {
+  async ensureSession({ signal } = {}) {
+    signal?.throwIfAborted();
     if (this.session && Number(this.session.expiry) * 1000 > Date.now() + 60000) return;
     const response = await this.request(`${API}createSession?${new URLSearchParams({ key: this.key })}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', signal, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mapType: 'streetview', language: 'en-US', region: 'IL' }),
     });
     this.session = await response.json();
@@ -29,14 +30,15 @@ export class StreetTiles {
   url(path, parameters) {
     return `${API}${path}?${new URLSearchParams({ ...parameters, session: this.session.session, key: this.key })}`;
   }
-  async metadata(location) {
-    await this.ensureSession();
-    const response = await this.request(this.url('streetview/metadata', location));
+  async metadata(location, options = {}) {
+    await this.ensureSession(options);
+    const response = await this.request(this.url('streetview/metadata', location), options);
     const data = await response.json();
     if (!data.panoId || !data.copyright) throw new Error('No Street View imagery is available here.');
     return data;
   }
-  async image(metadata, zoom = 4, onProgress = () => {}) {
+  async image(metadata, zoom = 4, onProgress = () => {}, { signal } = {}) {
+    signal?.throwIfAborted();
     const layout = tileLayout(metadata, zoom);
     const canvas = document.createElement('canvas');
     canvas.width = layout.width; canvas.height = layout.height;
@@ -45,14 +47,17 @@ export class StreetTiles {
     const count = layout.columns * layout.rows;
     let cursor = 0, completed = 0;
     const controller = new AbortController();
+    const cancel = () => controller.abort();
+    signal?.addEventListener('abort', cancel, { once: true });
     const timeout = setTimeout(() => controller.abort(), 45000);
     // Only load the view requested by the user. No route prefetch or persistent imagery cache.
     const workers = Array.from({ length: Math.min(6, count) }, async () => {
       while (cursor < count) {
+        controller.signal.throwIfAborted();
         const index = cursor++, x = index % layout.columns, y = Math.floor(index / layout.columns);
         const response = await this.request(this.url(`streetview/tiles/${zoom}/${x}/${y}`, { panoId: metadata.panoId }), { signal: controller.signal });
         const bitmap = await createImageBitmap(await response.blob());
-        try { context.drawImage(bitmap, x * layout.tileWidth, y * layout.tileHeight); }
+        try { controller.signal.throwIfAborted(); context.drawImage(bitmap, x * layout.tileWidth, y * layout.tileHeight); }
         finally { bitmap.close(); }
         onProgress(++completed / count);
       }
@@ -64,8 +69,9 @@ export class StreetTiles {
       controller.abort();
       await Promise.allSettled(workers);
       canvas.width = canvas.height = 1;
+      if (signal?.aborted) throw new DOMException('Panorama superseded', 'AbortError');
       if (error.name === 'AbortError' || error.name === 'TimeoutError') throw new Error('The next street took too long to load. Press again to retry.');
       throw error;
-    } finally { clearTimeout(timeout); }
+    } finally { clearTimeout(timeout); signal?.removeEventListener('abort', cancel); }
   }
 }
