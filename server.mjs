@@ -10,12 +10,17 @@ http.createServer(async (req, res) => {
   try {
     const route = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     if (route === '/xr-test' && req.method === 'GET') {
-      const page = (await readFile(path.join(root, 'quest.html'), 'utf8')).replace('src="quest.js?v=4"', 'src="/validation/xr-test.js"');
+      const page = (await readFile(path.join(root, 'quest.html'), 'utf8')).replace('src="quest.js?v=5"', 'src="/validation/xr-test.js"');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(page);
       return;
     }
-    if (route === '/validation/xr-test.js' && req.method === 'GET') {
-      const script = await readFile(new URL('./validation/xr-test.js', import.meta.url));
+    if (route === '/phone-test' && req.method === 'GET') {
+      const page = (await readFile(path.join(root, 'index.html'), 'utf8')).replace('src="app.js?v=4"','src="/validation/phone-test.js"');
+      res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(page);
+      return;
+    }
+    if (['/validation/xr-test.js','/validation/phone-test.js'].includes(route) && req.method === 'GET') {
+      const script = await readFile(new URL('.'+route, import.meta.url));
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' }).end(script);
       return;
     }
